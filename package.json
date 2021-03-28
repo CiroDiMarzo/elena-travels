@@ -4,10 +4,11 @@
   "scripts": {
     "ng": "ng",
     "start": "http-server dist/EleTravels -c-1 -p 3000",
-    "build": "ng build",
+    "build": "ng build --prod",
     "test": "ng test",
     "lint": "ng lint",
-    "e2e": "ng e2e"
+    "e2e": "ng e2e",
+    "postinstall": "ngcc"
   },
   "private": true,
   "dependencies": {

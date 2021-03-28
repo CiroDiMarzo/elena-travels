@@ -3,35 +3,33 @@ import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
 import { map } from 'rxjs/operators';
 import { Observable, of as observableOf, merge } from 'rxjs';
+import { isFakeMousedownFromScreenReader } from '@angular/cdk/a11y';
+import { CustomFilter } from './custom-filter/custom-filter';
 
 // TODO: Replace this with your own data model type
 export interface TravelTableItem {
-  name: string;
+  startLocation: string;
+  endLocation: string;
+  distance: number;
   id: number;
 }
 
 // TODO: replace this with real data from your application
 const EXAMPLE_DATA: TravelTableItem[] = [
-  {id: 1, name: 'Hydrogen'},
-  {id: 2, name: 'Helium'},
-  {id: 3, name: 'Lithium'},
-  {id: 4, name: 'Beryllium'},
-  {id: 5, name: 'Boron'},
-  {id: 6, name: 'Carbon'},
-  {id: 7, name: 'Nitrogen'},
-  {id: 8, name: 'Oxygen'},
-  {id: 9, name: 'Fluorine'},
-  {id: 10, name: 'Neon'},
-  {id: 11, name: 'Sodium'},
-  {id: 12, name: 'Magnesium'},
-  {id: 13, name: 'Aluminum'},
-  {id: 14, name: 'Silicon'},
-  {id: 15, name: 'Phosphorus'},
-  {id: 16, name: 'Sulfur'},
-  {id: 17, name: 'Chlorine'},
-  {id: 18, name: 'Argon'},
-  {id: 19, name: 'Potassium'},
-  {id: 20, name: 'Calcium'},
+  {id: 1, startLocation: 'Meride', endLocation: 'Tremona', distance: 2},
+  {id: 2, startLocation: 'Arzo', endLocation: 'Besazio', distance: 1.1},
+  {id: 3, startLocation: 'Rancate', endLocation: 'Ligornetto', distance: 1.8},
+  {id: 4, startLocation: 'Stabio', endLocation: 'Genestrerio', distance: 2.8},
+  {id: 5, startLocation: 'Genestrerio', endLocation: 'Rancate', distance: 3},
+  {id: 6, startLocation: 'Ligornetto', endLocation: 'Arzo', distance: 4.7},
+  {id: 7, startLocation: 'Besazio', endLocation: 'Meride', distance: 3.2},
+  {id: 8, startLocation: 'Mendrisio', endLocation: 'Coldrerio', distance: 2.4},
+  {id: 9, startLocation: 'Balerna', endLocation: 'chiasso', distance: 3},
+  {id: 10, startLocation: 'Sagno', endLocation: 'Vacallo', distance: 5.6},
+  {id: 11, startLocation: 'Novazzano', endLocation: 'Pedrinate', distance: 3.7},
+  {id: 12, startLocation: 'Pedrinate', endLocation: 'Sagno', distance: 8.8},
+  {id: 13, startLocation: 'Vacallo', endLocation: 'Balerna', distance: 3.6},
+  {id: 14, startLocation: 'Chiasso', endLocation: 'Mendrisio', distance: 9.6}
 ];
 
 /**
@@ -43,9 +41,12 @@ export class TravelTableDataSource extends DataSource<TravelTableItem> {
   data: TravelTableItem[] = EXAMPLE_DATA;
   paginator: MatPaginator | undefined;
   sort: MatSort | undefined;
+  filter: CustomFilter;
 
   constructor() {
     super();
+
+    this.filter = new CustomFilter();
   }
 
   /**
@@ -54,12 +55,12 @@ export class TravelTableDataSource extends DataSource<TravelTableItem> {
    * @returns A stream of the items to be rendered.
    */
   connect(): Observable<TravelTableItem[]> {
-    if (this.paginator && this.sort) {
+    if (this.sort) {
       // Combine everything that affects the rendered data into one update
       // stream for the data-table to consume.
-      return merge(observableOf(this.data), this.paginator.page, this.sort.sortChange)
+      return merge(observableOf(this.data), this.filter.filterChange, this.sort.sortChange)
         .pipe(map(() => {
-          return this.getPagedData(this.getSortedData([...this.data ]));
+          return this.getSortedData(this.getFilteredData([...this.data ]));
         }));
     } else {
       throw Error('Please set the paginator and sort on the data source before connecting.');
@@ -73,16 +74,15 @@ export class TravelTableDataSource extends DataSource<TravelTableItem> {
   disconnect(): void {}
 
   /**
-   * Paginate the data (client-side). If you're using server-side pagination,
-   * this would be replaced by requesting the appropriate data from the server.
+   * Filters the data at client-side.
+   * @param data the data to be filtered.
    */
-  private getPagedData(data: TravelTableItem[]): TravelTableItem[] {
-    if (this.paginator) {
-      const startIndex = this.paginator.pageIndex * this.paginator.pageSize;
-      return data.splice(startIndex, this.paginator.pageSize);
-    } else {
-      return data;
+  private getFilteredData(data: TravelTableItem[]): TravelTableItem[] {
+    if (this.filter) {
+      return data.filter(item => item.startLocation.toLowerCase().indexOf(this.filter.filterText.toLowerCase()) > -1 || 
+                                  item.endLocation.toLowerCase().indexOf(this.filter.filterText.toLowerCase()) > -1);
     }
+    return data;
   }
 
   /**
@@ -97,11 +97,26 @@ export class TravelTableDataSource extends DataSource<TravelTableItem> {
     return data.sort((a, b) => {
       const isAsc = this.sort?.direction === 'asc';
       switch (this.sort?.active) {
-        case 'name': return compare(a.name, b.name, isAsc);
+        case 'startLocation': return compare(a.startLocation, b.startLocation, isAsc);
+        case 'endLocation': return compare(a.endLocation, b.endLocation, isAsc);
+        case 'distance': return compare(+a.distance, +b.distance, isAsc);
         case 'id': return compare(+a.id, +b.id, isAsc);
         default: return 0;
       }
     });
+  }
+
+  /**
+   * Paginate the data (client-side). If you're using server-side pagination,
+   * this would be replaced by requesting the appropriate data from the server.
+   */
+  private getPagedData(data: TravelTableItem[]): TravelTableItem[] {
+    if (this.paginator) {
+      const startIndex = this.paginator.pageIndex * this.paginator.pageSize;
+      return data.splice(startIndex, this.paginator.pageSize);
+    } else {
+      return data;
+    }
   }
 }
 
