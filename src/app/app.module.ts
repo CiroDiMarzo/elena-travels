@@ -20,12 +20,14 @@ import { ServiceWorkerModule } from '@angular/service-worker';
 import { environment } from '../environments/environment';
 import { MainNavigationComponent } from './main-navigation/main-navigation.component';
 import { TravelTableComponent } from './travel-table/travel-table.component';
+import { NewTravelComponent } from './new-travel/new-travel.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     MainNavigationComponent,
-    TravelTableComponent
+    TravelTableComponent,
+    NewTravelComponent
   ],
   imports: [
     FormsModule,

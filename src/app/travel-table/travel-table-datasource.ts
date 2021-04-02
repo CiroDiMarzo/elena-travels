@@ -2,17 +2,10 @@ import { DataSource } from '@angular/cdk/collections';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
 import { map } from 'rxjs/operators';
-import { Observable, of as observableOf, merge } from 'rxjs';
-import { isFakeMousedownFromScreenReader } from '@angular/cdk/a11y';
+import { Observable, of as observableOf, merge, of } from 'rxjs';
 import { CustomFilter } from './custom-filter/custom-filter';
-
-// TODO: Replace this with your own data model type
-export interface TravelTableItem {
-  startLocation: string;
-  endLocation: string;
-  distance: number;
-  id: number;
-}
+import { TravelTableItem } from 'src/models/travel-table-item.model';
+import { TravelService } from 'src/services/travel.service';
 
 // TODO: replace this with real data from your application
 const EXAMPLE_DATA: TravelTableItem[] = [
@@ -43,7 +36,7 @@ export class TravelTableDataSource extends DataSource<TravelTableItem> {
   sort: MatSort | undefined;
   filter: CustomFilter;
 
-  constructor() {
+  constructor(private travelService: TravelService) {
     super();
 
     this.filter = new CustomFilter();
@@ -58,10 +51,11 @@ export class TravelTableDataSource extends DataSource<TravelTableItem> {
     if (this.sort) {
       // Combine everything that affects the rendered data into one update
       // stream for the data-table to consume.
-      return merge(observableOf(this.data), this.filter.filterChange, this.sort.sortChange)
-        .pipe(map(() => {
-          return this.getSortedData(this.getFilteredData([...this.data ]));
+      return merge(observableOf(this.travelService.data), this.filter.filterChange, this.sort.sortChange)
+        .pipe(map((test) => {
+          return this.getSortedData(this.getFilteredData([...this.travelService.data ]));
         }));
+
     } else {
       throw Error('Please set the paginator and sort on the data source before connecting.');
     }
@@ -97,8 +91,8 @@ export class TravelTableDataSource extends DataSource<TravelTableItem> {
     return data.sort((a, b) => {
       const isAsc = this.sort?.direction === 'asc';
       switch (this.sort?.active) {
-        case 'startLocation': return compare(a.startLocation, b.startLocation, isAsc);
-        case 'endLocation': return compare(a.endLocation, b.endLocation, isAsc);
+        case 'startLocation': return compare(a.startLocation.toLowerCase(), b.startLocation.toLowerCase(), isAsc);
+        case 'endLocation': return compare(a.endLocation.toLowerCase(), b.endLocation.toLowerCase(), isAsc);
         case 'distance': return compare(+a.distance, +b.distance, isAsc);
         case 'id': return compare(+a.id, +b.id, isAsc);
         default: return 0;

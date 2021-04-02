@@ -1,9 +1,10 @@
 import { AfterViewInit, Component, ViewChild } from '@angular/core';
-import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
 import { MatTable } from '@angular/material/table';
+import { TravelTableItem } from 'src/models/travel-table-item.model';
 import { FilterSearchService } from 'src/services/filter-search.service';
-import { TravelTableDataSource, TravelTableItem } from './travel-table-datasource';
+import { TravelService } from 'src/services/travel.service';
+import { TravelTableDataSource } from './travel-table-datasource';
 
 @Component({
   selector: 'app-travel-table',
@@ -19,8 +20,9 @@ export class TravelTableComponent implements AfterViewInit {
   /** Columns displayed in the table. Columns IDs can be added, removed, or reordered. */
   displayedColumns = ['startLocation', 'endLocation', 'distance'];
 
-  constructor(private filterService: FilterSearchService) {
-    this.dataSource = new TravelTableDataSource();
+  constructor(private filterService: FilterSearchService,
+      private travelService: TravelService) {
+    this.dataSource = new TravelTableDataSource(this.travelService);
     this.filterService.filterChanged.subscribe(filterText => {
       this.dataSource.filter.filterText = filterText;
     })
